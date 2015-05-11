@@ -90,7 +90,7 @@ reduceData <- function (mdf) {
 
 analyzeData <- function (df) {
     # This almost works, but it produces two new columns I don't understand
-    adf <- aggregate(x=df,by=list(df$activity,df$subject),FUN="mean")
+    adf <- aggregate(. ~ activity+subject,data=reduced,FUN="mean")
     adf
 }
 
