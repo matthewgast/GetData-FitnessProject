@@ -5,46 +5,104 @@
 ## Course: "Getting and Cleaning Data" at the JHU Bloomberg School of
 ## Health (Coursera Data Science Specialization).
 
-# Read raw data
-training_x <- read.table("UCI HAR Dataset/train/X_train.txt")
-training_y <- read.table("UCI HAR Dataset/train/y_train.txt")
-training_subject <- read.table("UCI HAR Dataset/train/subject_train.txt")
-test_x <- read.table("UCI HAR Dataset/test/X_test.txt")
-test_y <- read.table("UCI HAR Dataset/test/y_test.txt")
-test_subject <- read.table("UCI HAR Dataset/test/subject_test.txt")
+readData <- function (directory) {
+    cwd <- getwd()
 
-#Read features
-features <- read.table("UCI HAR Dataset/features.txt")
-activities <- read.table("UCI HAR Dataset/activity_labels.txt")
+    if (missing(directory)) {
+        directory <- "/Users/mgast/Dropbox/data-science-specialization/3-getting-cleaning-data/GetData-FitnessProject"
+    }
+    setwd(directory)
 
-# Merge test & training data sets
-merge_x <- rbind(training_x,test_x)
-merge_y <- rbind(training_y,test_y)
-merge_subject <- rbind(training_subject,test_subject)
+    # TODO: test that all these exist before reading
+    
+    # Read raw data - training
+    if (!exists("x.train",where=globalenv())) {
+        message("Reading training data")
+        x.train <<- read.table("UCI HAR Dataset/train/X_train.txt")
+    }
+    if (!exists("y.train",where=globalenv())) {
+        message("Reading training activities")
+        y.train <<- read.table("UCI HAR Dataset/train/y_train.txt")
+    }
+    if (!exists("sub.train",where=globalenv())) {
+        message("Reading training subjects")
+        sub.train <<- read.table("UCI HAR Dataset/train/subject_train.txt")
+    }
 
-# Making sense of data
-names(merge_x) <- features_raw[,2]
+    # Read raw data - test
+    if (!exists("x.test",where=globalenv())) {
+        message("Reading test data")
+        x.test <<- read.table("UCI HAR Dataset/test/X_test.txt")
+    }
+    if (!exists("y.test",where=globalenv())) {
+        message("Reading test activities")
+        y.test <<- read.table("UCI HAR Dataset/test/y_test.txt")
+    }
+    if (!exists("sub.test",where=globalenv())) {
+        message("Reading test subjects")
+        sub.test <<- read.table("UCI HAR Dataset/test/subject_test.txt")
+    }
 
-# put whole data set together
-#  step 1: add subject column
-df <- cbind(merge_x,merge_subject)
-names(df)[562] <- "subject"
-#  step 2: add activity column
-df2 <- cbind(df,factor(merge_y[[1]],activities$V1,labels=activities$V2))
-names(df2)[563] <- "activity"
+    #Read column names and feature number-to-name mapping
+    message("Reading features and activity metadata")
+    features <<- read.table("UCI HAR Dataset/features.txt")
+    activities <<- read.table("UCI HAR Dataset/activity_labels.txt")
+    names(activities) <<- c("number","name")
+    
+    setwd(cwd)
+    message("Read complete")
+    # No return required because variables are global
+}
 
-# find columns with mean and standard deviation
-meanCols <- grepl("mean",names(df2),ignore.case=TRUE)
-stdCols <- grepl("std",names(df2),ignore.case=TRUE)
-colsToGet <- meanCols | stdCols
-#  but also get activity & subject
-colsToGet[562] <- TRUE
-colsToGet[563] <- TRUE
+mergeData <- function () {
+    # Merge test & training data sets
+    mdf.x <- rbind(x.train,x.test)
+    mdf.activities <- rbind(y.train,y.test)
+    mdf.sub <- rbind(sub.train,sub.test)
 
-# reduce data set to only the cols I want
-df3 <- df2[,colsToGet]
+    # Add subject & activity columns to merged data set
+    #    - Note: rewrite activity number with named factor
+    mdf <- cbind(mdf.sub,
+                 factor(mdf.activities[[1]],
+                        activities$number,
+                        labels=activities$name),
+                 mdf.x)
+    names(mdf) <- c("subject","activity",as.character(features[,2]))
 
-# This almost works, but it produces two new columns I don't understand
-agg.df3 <- aggregate(x=df3,by=list(df3$activity,df3$subject),FUN="mean")
+    return(mdf)
+}
+
+reduceData <- function (mdf) {
+    # Step 1: reduce data: find cols w/ "mean" or "std"
+    mean.cols <- grepl("mean",names(mdf),ignore.case=TRUE)
+    std.cols <- grepl("std",names(mdf),ignore.case=TRUE)
+
+    # For reduction purposes, we also need subject and activity
+    sub.col <- grepl("subject",names(mdf),ignore.case=TRUE)
+    act.col <- grepl("activity",names(mdf),ignore.case=TRUE)
+
+    cols.to.get <- mean.cols | std.cols | sub.col | act.col
+
+    # reduce data set to only the cols I want
+    rdf <- mdf[,cols.to.get]
+    rdf
+}
+
+analyzeData <- function (df) {
+    # This almost works, but it produces two new columns I don't understand
+    adf <- aggregate(x=df,by=list(df$activity,df$subject),FUN="mean")
+    adf
+}
+
+runAnalysis <- function () {
+    readData()
+    merged <- mergeData()
+
+    reduced <- reduceData(merged)
+    analyzed <- analyzeData(reduced)
+}
+
+
+
 
 
