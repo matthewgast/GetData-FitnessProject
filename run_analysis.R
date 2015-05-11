@@ -44,8 +44,7 @@ colsToGet[563] <- TRUE
 # reduce data set to only the cols I want
 df3 <- df2[,colsToGet]
 
-# This doesn't quite work.  Want mean of each measurement, sorted by
-# activity and subject
-aggregate(x=df3,by=list(df3$activity,df3$subject),FUN="mean")
-# Syntax error, because it's not a set of columns
-summarize(group_by(df3,subject,activity),colMeans)
+# This almost works, but it produces two new columns I don't understand
+agg.df3 <- aggregate(x=df3,by=list(df3$activity,df3$subject),FUN="mean")
+
+
